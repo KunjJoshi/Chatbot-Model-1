@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            background-color: #fff;
+            width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-area {
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            min-height: 200px;
+            padding: 10px;
+            margin-bottom: 10px;
+            overflow-y: auto;
+        }
+
+        .message {
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            max-width: 70%;
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+            float: left;
+        }
+
+        .bot-message {
+            background-color: #ccc;
+            font-weight: bold;
+            float: right;
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+        }
+
+        #userPrompt {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+
+        #sendButton {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+
+        #sendButton img {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-area" id="chatArea">
+            <!-- Chat messages will be added here dynamically -->
+        </div>
+        <div class="input-container">
+            <input type="text" id="userPrompt" placeholder="Type your question...">
+            <button id="sendButton" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const chatArea = document.getElementById('chatArea');
+        const userPrompt = document.getElementById('userPrompt');
+        const sendButton = document.getElementById('sendButton');
+
+        function appendMessage(message, type) {
+            const messageBox = document.createElement('div');
+            messageBox.classList.add('message', type);
+            messageBox.textContent = message;
+            chatArea.appendChild(messageBox);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function sendMessage() {
+            const userMessage = userPrompt.value.trim();
+            if (userMessage !== '') {
+                appendMessage(userMessage, 'user-message');
+
+                // Send the user message to the Flask backend
+                fetch('/send_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `user_prompt=${encodeURIComponent(userMessage)}`,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const botResponse = data.response;
+                    appendMessage(botResponse, 'bot-message');
+                })
+                .catch(error => {
+                    console.error('Error fetching response from backend:', error);
+                });
+
+                userPrompt.value = '';
+            }
+        }
+
+        // Fetch chat history on page load
+        fetch('/get_chat_history')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    appendMessage(item.user, 'user-message');
+                    appendMessage(item.bot, 'bot-message');
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching chat history from backend:', error);
+            });
+    </script>
+</body>
+</html>
